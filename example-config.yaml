@@ -1,0 +1,12 @@
+Synjones-Auth: ""
+dorm: ""
+room:
+threshold: 10 # 剩余电量低于此值将发邮件提醒
+
+smtp:
+  server: "smtp.qq.com"
+  port: 465
+  sender: "example@qq.com"
+  receiver:
+    - "example@qq.com"
+  auth_code: "" # or password
