@@ -1,11 +1,12 @@
-name: SduElectricityReminder
+name: Reminder
 
 on:
   push:
     branches:
       - main
   schedule:
-    - cron: '0 19,20,21 * * *'  # GMT+8 16:00 17:00 18:00
+    - cron: "18 11,12,13 * * *" # GMT+8 19:18, 20:18, 21:18
+  workflow_dispatch:
 
 jobs:
   sdu-electricity-spider:
@@ -25,7 +26,9 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Run Spider in VPN
+      - name: Run Scraper
+        env:
+          CONFIG_YAML: ${{ secrets.CONFIG_YAML}}
         run: |
-            curl -m 3 --retry 3 -s -o /dev/null https://mcard.sdu.edu.cn/charge/feeitem/getThirdData
-            python auto-script.py --email ${{ secrets.EMAIL }} --password ${{ secrets.PASSWORD }} --Synjones_Auth "${{ secrets.SYNJONES_AUTH }}" --email_list "${{ secrets.EMAIL_LIST }}"
+          curl -m 3 --retry 3 -s -o /dev/null https://mcard.sdu.edu.cn/charge/feeitem/getThirdData
+          python auto-script.py

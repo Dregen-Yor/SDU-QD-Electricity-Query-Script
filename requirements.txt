@@ -1,4 +1,5 @@
 requests
 pyyaml
 streamlit
+python-dotenv
 

@@ -1,61 +1,51 @@
-import argparse
 import smtplib
-from email import encoders
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from email.utils import formataddr
+from email.mime.text import MIMEText
+from email.header import Header
 from QueryScript import query
+from config import config
 
-def send_email(subject, body, to_email, from_email, smtp_server, smtp_port, login, password):
-    msg = MIMEMultipart()
+
+def send_email(subject: str, content: str) -> None:
+    smtp_config = config["smtp"]
+    msg = MIMEText(content, "html", "utf-8")
+
     from_name = "宿舍电量警告"
-    msg['From'] = formataddr((from_name, from_email))
-    if isinstance(to_email, list):
-        msg['To'] = ",".join(to_email)
+    msg["From"] = formataddr((
+        str(Header(from_name, "utf-8")),
+        smtp_config["sender"],
+    ))
+
+    receivers = smtp_config["receiver"]
+    if isinstance(receivers, list):
+        msg["To"] = ",".join(receivers)
+        to_addrs = receivers
     else:
-        msg['To'] = to_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText('<html><body><p>'+body +'</p>' +
-    '</body></html>', 'html', 'utf-8'))
-    server = smtplib.SMTP(smtp_server, smtp_port)
-    server.starttls()
-    server.login(login, password)
+        msg["To"] = receivers
+        to_addrs = [receivers]
 
-    server.sendmail(from_email, to_email, msg.as_string())
+    msg["Subject"] = str(Header(subject, "utf-8"))
 
-    server.quit()
+    with smtplib.SMTP_SSL(smtp_config["server"], int(smtp_config["port"])) as smtp:
+        smtp.login(smtp_config["sender"], smtp_config["auth_code"])
+        smtp.sendmail(smtp_config["sender"], to_addrs, msg.as_string())
+
 
 if __name__ == "__main__":
-    import yaml
-    with open('config.yaml') as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    parser = argparse.ArgumentParser(description='Process some inputs.')
-    parser.add_argument('--email', required=True, help='Email address')
-    parser.add_argument('--password', required=True, help='Password')
-    parser.add_argument('--Synjones_Auth', required=True, help='Synjones_Auth')
-    parser.add_argument('--email_list',  help='Additional email addresses')
-    args = parser.parse_args()
-    
-    email = args.email
-    password = args.password
-    Synjones_Auth = args.Synjones_Auth
-    print(f"Email: {email}")
-    print(f"Password: {password}")
-
-    from_email = email
-    smtp_server = "smtphm.qiye.163.com" # 此处使用山大云邮（网易企业邮箱）的SMTP服务器
-    smtp_port = 587
-    login = email
-    password = password
     subject = "宿舍电量提醒"
-    last = query("S11", 221, Synjones_Auth=Synjones_Auth)
+
+    Synjones_Auth = config["Synjones-Auth"]
+    dorm = config["dorm"]
+    room = config["room"]
+
+    last = query(dorm, room, Synjones_Auth=Synjones_Auth)
     print(f"Query result: {last}")  # 添加调试信息
 
     try:
         last_value = float(last)
-        body = f"byd同学：<br><br>您好！<br><br>您的宿舍电量不足，仅剩{last_value}度，请及时充值。"
-        if last_value < 10: #last_value 为宿舍剩余电量，低于10度时发送邮件提醒，可根据实际情况修改
-            email_list = args.email_list.split(",") if args.email_list else []
-            send_email(subject, body, email_list, from_email, smtp_server, smtp_port, login, password)
+        body = f"byd同学：<br><br>您好！<br><br>您的宿舍{dorm} {room}电量不足，仅剩{last_value}，请及时充值。"
+        # last_value 为宿舍剩余电量，低于{threshold}度时发送邮件提醒，可根据实际情况修改，默认为10
+        if last_value < config.get("threshold", 10):
+            send_email(subject, body)
     except ValueError as e:
         print(f"Error converting query result to float: {e}")
