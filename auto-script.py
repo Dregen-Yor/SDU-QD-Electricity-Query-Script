@@ -31,7 +31,7 @@ def send_email(subject: str, content: str) -> None:
         smtp.sendmail(smtp_config["sender"], to_addrs, msg.as_string())
 
 
-if __name__ == "__main__":
+def main_handler(event, context) -> str:
     subject = "宿舍电量提醒"
 
     Synjones_Auth = config["Synjones-Auth"]
@@ -49,3 +49,8 @@ if __name__ == "__main__":
             send_email(subject, body)
     except ValueError as e:
         print(f"Error converting query result to float: {e}")
+    return f"Execution finished. Electricity balance: {last} kWh"
+
+
+if __name__ == "__main__":
+    main_handler()
